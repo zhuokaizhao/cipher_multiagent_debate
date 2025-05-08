@@ -1,5 +1,6 @@
 from transformers import (
     AutoTokenizer,  # type: ignore
+    AutoModelForCausalLM,  # type: ignore
     LlamaForCausalLM,
     LlamaTokenizer,  # type: ignore
     FalconForCausalLM,  # type: ignore
@@ -96,8 +97,12 @@ class Agent:
         sep_token_ids["llama"]["backtick_start"] = 7521  ## : ```...
         sep_token_ids["llama"]["backtick_end"] = 28956  ## ...```\n
         sep_token_ids["llama"]["answer"] = 22550
-        sep_token_ids["llama"]["double_enters"] = torch.tensor([13, 13], device=self.device)
-        sep_token_ids["llama"]["your_solution"] = torch.tensor([10858, 1650, 29901], device=self.device)
+        sep_token_ids["llama"]["double_enters"] = torch.tensor(
+            [13, 13], device=self.device
+        )
+        sep_token_ids["llama"]["your_solution"] = torch.tensor(
+            [10858, 1650, 29901], device=self.device
+        )
         sep_token_ids["llama"]["correct_solution"] = torch.tensor(
             [12521, 1621, 1650, 29901], device=self.device
         )
@@ -109,9 +114,15 @@ class Agent:
         sep_token_ids["falcon"]["backtick_start"] = 17593  ## : ```...
         sep_token_ids["falcon"]["backtick_end"] = 17593  ## ...```\n
         sep_token_ids["falcon"]["answer"] = 20309
-        sep_token_ids["falcon"]["double_enters"] = torch.tensor([193, 193], device=self.device)
-        sep_token_ids["falcon"]["your_solution"] = torch.tensor([4560, 3377, 37, 204], device=self.device)
-        sep_token_ids["falcon"]["correct_solution"] = torch.tensor([42545, 3377, 37, 204], device=self.device)
+        sep_token_ids["falcon"]["double_enters"] = torch.tensor(
+            [193, 193], device=self.device
+        )
+        sep_token_ids["falcon"]["your_solution"] = torch.tensor(
+            [4560, 3377, 37, 204], device=self.device
+        )
+        sep_token_ids["falcon"]["correct_solution"] = torch.tensor(
+            [42545, 3377, 37, 204], device=self.device
+        )
         sep_token_ids["falcon"]["lets_think_step_by_step"] = torch.tensor(
             [5400, 18, 94, 864, 2006, 431, 2006, 37, 193], device=self.device
         )
@@ -120,9 +131,15 @@ class Agent:
         sep_token_ids["mpt"]["backtick_start"] = 5190  ## : ```...
         sep_token_ids["mpt"]["backtick_end"] = 11202  ## ...```\n
         sep_token_ids["mpt"]["answer"] = 32869
-        sep_token_ids["mpt"]["double_enters"] = torch.tensor([187, 187], device=self.device)
-        sep_token_ids["mpt"]["your_solution"] = torch.tensor([7093, 2900, 27, 2634], device=self.device)
-        sep_token_ids["mpt"]["correct_solution"] = torch.tensor([47390, 2900, 27, 2634], device=self.device)
+        sep_token_ids["mpt"]["double_enters"] = torch.tensor(
+            [187, 187], device=self.device
+        )
+        sep_token_ids["mpt"]["your_solution"] = torch.tensor(
+            [7093, 2900, 27, 2634], device=self.device
+        )
+        sep_token_ids["mpt"]["correct_solution"] = torch.tensor(
+            [47390, 2900, 27, 2634], device=self.device
+        )
         sep_token_ids["mpt"]["lets_think_step_by_step"] = torch.tensor(
             [1466, 434, 1158, 3213, 407, 3213, 27, 209, 187], device=self.device
         )
@@ -133,7 +150,9 @@ class Agent:
         ## technically, this is </s>, not backtick, but we don't use backtick (we follow wizardmath prompt template)
 
         sep_token_ids["wizardmath"]["answer"] = 1234
-        sep_token_ids["wizardmath"]["double_enters"] = sep_token_ids["llama"]["double_enters"]  # "\n\n"
+        sep_token_ids["wizardmath"]["double_enters"] = sep_token_ids["llama"][
+            "double_enters"
+        ]  # "\n\n"
         sep_token_ids["wizardmath"]["your_solution"] = torch.tensor(
             [2277, 29937, 3575, 1650, 29901], device=self.device
         )  # "### Your solution: "
@@ -205,14 +224,16 @@ class Agent:
             #     LLaMA = LlamaHFv1  ## only LLaMA. transformer 4.30.0
 
             print("self.context_length", self.context_length)
-            LLaMA = LlamaForCausalLM
-            self.tokenizer = LlamaTokenizer.from_pretrained(agent_path)
-            self.tokenizer.pad_id = self.tokenizer.eos_token_id
+            LLaMA = AutoModelForCausalLM
+            # self.tokenizer = LlamaTokenizer.from_pretrained(agent_path)
+            self.tokenizer = AutoTokenizer.from_pretrained(agent_path)
+            # self.tokenizer.pad_id = self.tokenizer.eos_token_id
+            self.tokenizer.pad_token = self.tokenizer.eos_token
 
             # https://github.com/huggingface/transformers/blob/476be08c4aa96f8c1cae4200d2677bbe8f12cf80/src/transformers/models/llama/modeling_llama.py#L727C1-L727C1
             self.agent = LLaMA.from_pretrained(
                 agent_path,
-                load_in_8bit=self.load_in_8bit,
+                # load_in_8bit=self.load_in_8bit,
                 device_map="auto",
                 torch_dtype=torch.float16,
             )  ##.to("cuda")
@@ -220,13 +241,19 @@ class Agent:
             self.emb_table = self.agent.model.embed_tokens  ## type: ignore [32000, d]
 
             if self.dataset == "mmlu":
-                abcd_ids = self.tokenizer(["A", "B", "C", "D"], add_special_tokens=False)["input_ids"]
+                abcd_ids = self.tokenizer(
+                    ["A", "B", "C", "D"], add_special_tokens=False
+                )["input_ids"]
                 abcd_ids = [item for sublist in abcd_ids for item in sublist]
                 self.emb_choices = F.normalize(
-                    self.emb_table(torch.tensor(abcd_ids, device=self.device)), p=2, dim=-1
+                    self.emb_table(torch.tensor(abcd_ids, device=self.device)),
+                    p=2,
+                    dim=-1,
                 ).float()
                 self.choices_mapper = {"0": "A", "1": "B", "2": "C", "3": "D"}
-            self.emb_table_norm = F.normalize(self.emb_table.weight, p=2, dim=-1)  ## type: ignore
+            self.emb_table_norm = F.normalize(
+                self.emb_table.weight, p=2, dim=-1
+            )  ## type: ignore
 
             with open("config.yml", "r") as yaml_file:
                 yaml_config = yaml.safe_load(yaml_file)
@@ -256,7 +283,9 @@ class Agent:
             self.agent = BetterTransformer.transform(agent, keep_original_model=True)
 
             # Setting `pad_token_id` to `eos_token_id`:11 for open-end generation.
-            self.tokenizer.pad_id = self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
+            self.tokenizer.pad_id = self.tokenizer.pad_token_id = (
+                self.tokenizer.eos_token_id
+            )
             self.emb_table = self.agent.transformer.word_embeddings
             self.emb_table_norm = F.normalize(self.emb_table.weight, p=2, dim=-1)
 
@@ -268,7 +297,9 @@ class Agent:
                 device_map="auto",
                 load_in_8bit=self.load_in_8bit,
             )
-            self.tokenizer.pad_id = self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
+            self.tokenizer.pad_id = self.tokenizer.pad_token_id = (
+                self.tokenizer.eos_token_id
+            )
             self.emb_table = self.agent.transformer.wte  # Embedding(50432, 7168)
             self.emb_table_norm = F.normalize(self.emb_table.weight, p=2, dim=-1)
         else:
@@ -286,7 +317,11 @@ class Agent:
         return prompt
 
     def make_debate_prompt(
-        self, question: str, prev_sols: Tuple[str], agent_idx: int, vector_language: bool
+        self,
+        question: str,
+        prev_sols: Tuple[str],
+        agent_idx: int,
+        vector_language: bool,
     ) -> str:
         question = question.strip()
         prompt = self.debate_prompt.replace(self.placeholders["question"], question)
@@ -297,14 +332,18 @@ class Agent:
             other_sols = prev_sols[:agent_idx] + prev_sols[agent_idx + 1 :]
 
             for i, other_sol in enumerate(other_sols):
-                placeholder_i = self.placeholders["other_sol"].replace("}", f"_{i}" + "}")
+                placeholder_i = self.placeholders["other_sol"].replace(
+                    "}", f"_{i}" + "}"
+                )
                 prompt = prompt.replace(placeholder_i, other_sol)
 
             prompt = prompt.replace(self.placeholders["my_sol"], my_sol)
 
         return prompt
 
-    def _generate_single_output(self, prompt: str, temperature: float, top_p: float) -> str:
+    def _generate_single_output(
+        self, prompt: str, temperature: float, top_p: float
+    ) -> str:
         """
         Generate output for a single question, using Hugging Face functions
         """
@@ -313,7 +352,9 @@ class Agent:
             prompt, return_tensors="pt", truncation=True, max_length=self.context_length
         ).to(self.device)
 
-        print(f"num tokens: {len(inputs.input_ids[0])}, temperature: {temperature}, top_p: {top_p}")
+        print(
+            f"num tokens: {len(inputs.input_ids[0])}, temperature: {temperature}, top_p: {top_p}"
+        )
 
         generate_ids = self.agent.generate(  ## type: ignore
             inputs.input_ids,
@@ -331,10 +372,15 @@ class Agent:
 
         return res
 
-    def _expert_solution(self, vector_language: bool, gt_for_expert: List[str], prompts: List[str]):
+    def _expert_solution(
+        self, vector_language: bool, gt_for_expert: List[str], prompts: List[str]
+    ):
         print("expert answer")
         if vector_language:
-            gt_clean = [re.sub(r"<<.*?>>", "", gt).replace("\n####", "\nAnswer:") for gt in gt_for_expert]
+            gt_clean = [
+                re.sub(r"<<.*?>>", "", gt).replace("\n####", "\nAnswer:")
+                for gt in gt_for_expert
+            ]
             return {
                 "emb": self._text_to_emb(gt_clean, False),
                 "nearest_neighbor_texts": gt_clean,
@@ -365,7 +411,9 @@ class Agent:
         if self.use_expert_or_dummy_expert:
             assert gt_for_expert is not None, "need to provide gt for expert model!"
             return self._expert_solution(
-                vector_language=vector_language, gt_for_expert=gt_for_expert, prompts=prompts
+                vector_language=vector_language,
+                gt_for_expert=gt_for_expert,
+                prompts=prompts,
             )
 
         elif (
@@ -396,7 +444,9 @@ class Agent:
                 return generated_text, generated_text_ans_token, prompts
         else:
             decoded_strs = [
-                self._generate_single_output(prompt, temperature=temperature, top_p=top_p)
+                self._generate_single_output(
+                    prompt, temperature=temperature, top_p=top_p
+                )
                 for prompt in prompts
             ]
             generated_text = generated_text_ans_token = decoded_strs
@@ -423,7 +473,9 @@ class Agent:
         prev_sols_batch: `batch` entries, each entry is a tuple of `num_agents` solutions
         """
         ## more prev_sols_batch to the same device
-        if convert_to_cpu and vector_language:  ## prev_sols_batch may in CPU now, needed to move to GPU
+        if (
+            convert_to_cpu and vector_language
+        ):  ## prev_sols_batch may in CPU now, needed to move to GPU
             ## move prev_sol_batch to cuda
             prev_sols_batch_cuda = []
             for i in range(len(prev_sols_batch)):
@@ -444,17 +496,24 @@ class Agent:
 
         prompts = [
             self.make_debate_prompt(
-                ques, prev_sols=prev_sols, agent_idx=agent_index, vector_language=vector_language
+                ques,
+                prev_sols=prev_sols,
+                agent_idx=agent_index,
+                vector_language=vector_language,
             )
             for ques, prev_sols in zip(questions, prev_sols_batch)
         ]
 
         if gt_for_expert is not None:
-            assert self.use_expert_or_dummy_expert, "Only provide gt for expert/dummy_expert model!"
+            assert (
+                self.use_expert_or_dummy_expert
+            ), "Only provide gt for expert/dummy_expert model!"
         if self.use_expert_or_dummy_expert:
             assert gt_for_expert is not None, "need to provide gt for expert model!"
             return self._expert_solution(
-                vector_language=vector_language, gt_for_expert=gt_for_expert, prompts=prompts
+                vector_language=vector_language,
+                gt_for_expert=gt_for_expert,
+                prompts=prompts,
             )
 
         elif (
@@ -464,14 +523,18 @@ class Agent:
             or self.engine.startswith("wizardmath")
         ):
             if vector_language:
-                my_sol_emb_batch = [sol[agent_index] for sol in prev_sols_batch]  # each is a tensor
+                my_sol_emb_batch = [
+                    sol[agent_index] for sol in prev_sols_batch
+                ]  # each is a tensor
                 if other_sols_batch is None:
                     other_sols_emb_batch = [
-                        list(sol[:agent_index] + sol[agent_index + 1 :]) for sol in prev_sols_batch
+                        list(sol[:agent_index] + sol[agent_index + 1 :])
+                        for sol in prev_sols_batch
                     ]  ## each element is a list of tensor (i.e., `num_agents` - 1 tensors)
                 else:
                     other_sols_emb_batch = [
-                        list(sol[:agent_index] + sol[agent_index + 1 :]) for sol in other_sols_batch
+                        list(sol[:agent_index] + sol[agent_index + 1 :])
+                        for sol in other_sols_batch
                     ]  ## each element is a list of tensor (i.e., `num_agents` - 1 tensors)
                     ## note, this work for 2 agents debate where one is llama 1 and the other is llama2.
                     ## for more than 3 agents debate that are different llama versions, we may need to change this.
@@ -495,7 +558,9 @@ class Agent:
                 return generated_text, generated_text_ans_token, prompts
         else:
             decoded_strs = [
-                self._generate_single_output(prompt, temperature=temperature, top_p=top_p)
+                self._generate_single_output(
+                    prompt, temperature=temperature, top_p=top_p
+                )
                 for prompt in prompts
             ]
             generated_text = generated_text_ans_token = decoded_strs
@@ -524,14 +589,18 @@ class Agent:
         return token_embs
 
     @torch.inference_mode()
-    def _generate_tokens(self, prompt_tokens: List[Tensor], temperature: float, top_p: float) -> Tensor:
+    def _generate_tokens(
+        self, prompt_tokens: List[Tensor], temperature: float, top_p: float
+    ) -> Tensor:
         bsz = len(prompt_tokens)
 
         min_prompt_size = min([len(t) for t in prompt_tokens])
         max_prompt_size = max([len(t) for t in prompt_tokens])
 
         total_len = self.max_new_tokens + max_prompt_size
-        tokens = torch.full((bsz, total_len), self.tokenizer.pad_id).cuda().long()  ## type: ignore
+        tokens = (
+            torch.full((bsz, total_len), self.tokenizer.pad_id).cuda().long()
+        )  ## type: ignore
         for k, t in enumerate(prompt_tokens):
             tokens[k, : len(t)] = t
         input_text_mask = tokens != self.tokenizer.pad_id  ## type: ignore
@@ -587,10 +656,14 @@ class Agent:
                 if self.debug:
                     probs_no_temp = torch.softmax(logits, dim=-1)
                     probs_sort, probs_idx = torch.sort(probs, dim=-1, descending=True)
-                    probs_no_temp_sort, probs_no_temp_idx = torch.sort(probs_no_temp, dim=-1, descending=True)
+                    probs_no_temp_sort, probs_no_temp_idx = torch.sort(
+                        probs_no_temp, dim=-1, descending=True
+                    )
                     k_tokens = 10
                     top_k_tokens_idx = probs_idx[:, :k_tokens]
-                    top_k_tokens = [self.tokenizer.decode(idx) for idx in top_k_tokens_idx]
+                    top_k_tokens = [
+                        self.tokenizer.decode(idx) for idx in top_k_tokens_idx
+                    ]
 
             if temperature > 0:
                 next_token = self._sample_top_p(probs, top_p)
@@ -605,12 +678,16 @@ class Agent:
                     np.round(probs_sort.cpu().numpy()[:k_tokens], 2),  ## type: ignore
                     "\t",
                     "prob_no_temp",
-                    np.round(probs_no_temp_sort.cpu().numpy()[:k_tokens], 2),  ## type: ignore
+                    np.round(
+                        probs_no_temp_sort.cpu().numpy()[:k_tokens], 2
+                    ),  ## type: ignore
                 )
 
             next_token = next_token.reshape(-1)  ## [b,1] -> [b]
             # only replace token if prompt has already been generated
-            next_token = torch.where(input_text_mask[:, cur_pos], tokens[:, cur_pos], next_token)
+            next_token = torch.where(
+                input_text_mask[:, cur_pos], tokens[:, cur_pos], next_token
+            )
             tokens[:, cur_pos] = next_token  ## [b, 265]
 
             prev_pos = cur_pos
@@ -655,7 +732,9 @@ class Agent:
                     ## if "Answer: something" in the answer,
                     ## we'll chop off at the first stop mask (i.e., backtick and eos, if any) after it.
                     if len(ans_token_idxs) > 0:
-                        ans_token_index = ans_token_idxs[0]  ## pick the first index it appears
+                        ans_token_index = ans_token_idxs[
+                            0
+                        ]  ## pick the first index it appears
                         idx_of_stop_idxs = torch.where(ans_token_index < stop_index)[0]
                         if len(idx_of_stop_idxs) > 0:
                             idx_of_stop_index = idx_of_stop_idxs[0]
@@ -671,7 +750,10 @@ class Agent:
             t = t[:stop_index]
             decoded.append(self.tokenizer.decode(t))
             stop_idxs_list.append(stop_index)
-        return decoded, stop_idxs_list  ## decoded texts, stop index after removing prompts
+        return (
+            decoded,
+            stop_idxs_list,
+        )  ## decoded texts, stop index after removing prompts
 
     def generate_outputs_human(
         self, prompts: List[str], temperature: float, top_p: float, early_stop: bool
@@ -680,12 +762,17 @@ class Agent:
         prompt_lens = [len(t) for t in prompt_tokens]
         all_generated_tokens = self._generate_tokens(prompt_tokens, temperature, top_p)
         generated_text, stop_idxs = self._decode_tokens(
-            all_generated_tokens, prompt_lens, self.max_new_tokens, early_stop=early_stop
+            all_generated_tokens,
+            prompt_lens,
+            self.max_new_tokens,
+            early_stop=early_stop,
         )
 
         generated_tokens = self.remove_promp_emb(all_generated_tokens, prompt_lens)
 
-        generated_token_embs = [emb[:stop] for emb, stop in zip(generated_tokens, stop_idxs)]
+        generated_token_embs = [
+            emb[:stop] for emb, stop in zip(generated_tokens, stop_idxs)
+        ]
         if not self.no_convert_ans_choice:
             generated_text_token_choice = self._nearest_token_choice(
                 generated_text, generated_token_embs, vector=False
@@ -709,7 +796,9 @@ class Agent:
         total_len = self.max_new_tokens + max(prompt_lens)
 
         all_token_embs = torch.full(
-            (bsz, total_len, dim), self.tokenizer.pad_id, device=self.device  ## type: ignore
+            (bsz, total_len, dim),
+            self.tokenizer.pad_id,
+            device=self.device,  ## type: ignore
         ).to(torch.float16)
         input_text_mask = torch.full((bsz, total_len), False, device=self.device).to(bool)  # type: ignore
 
@@ -773,7 +862,9 @@ class Agent:
             if self.debug:
                 probs_no_temp = torch.softmax(logits, dim=-1)
                 probs_sort, probs_idx = torch.sort(probs, dim=-1, descending=True)
-                probs_no_temp_sort, probs_no_temp_idx = torch.sort(probs_no_temp, dim=-1, descending=True)
+                probs_no_temp_sort, probs_no_temp_idx = torch.sort(
+                    probs_no_temp, dim=-1, descending=True
+                )
                 k_tokens = 10
                 top_k_tokens_idx = probs_idx[:, :k_tokens]
                 top_k_tokens = [self.tokenizer.decode(idx) for idx in top_k_tokens_idx]
@@ -790,7 +881,9 @@ class Agent:
                 if self.use_entropy:
                     criteria = Categorical(probs=probs_no_temp).entropy().reshape(-1, 1)
                 else:
-                    criteria = torch.amax(probs_no_temp, dim=-1, keepdim=True)  # shape (b, 1)
+                    criteria = torch.amax(
+                        probs_no_temp, dim=-1, keepdim=True
+                    )  # shape (b, 1)
 
                 mask_data_binary = (
                     probs >= criteria
@@ -853,7 +946,11 @@ class Agent:
 
     @torch.inference_mode()
     def _decode_embs_nearest_neighbour(
-        self, token_embs: Tensor, prompt_lens: List[int], max_new_tokens: int, early_stop: bool
+        self,
+        token_embs: Tensor,
+        prompt_lens: List[int],
+        max_new_tokens: int,
+        early_stop: bool,
     ) -> Tuple[List[str], List[int]]:
         """
         Find the nearest neighbour
@@ -867,11 +964,16 @@ class Agent:
         ## get the index of the most similarity
         next_tokens = torch.argmin(dist, dim=-1)  ## [t]
 
-        decoded, stop_idxs = self._decode_tokens(next_tokens, prompt_lens, max_new_tokens, early_stop)
+        decoded, stop_idxs = self._decode_tokens(
+            next_tokens, prompt_lens, max_new_tokens, early_stop
+        )
         return decoded, stop_idxs
 
     def _nearest_token_choice(
-        self, nearest_neighbor_texts: List[str], generated_token_embs: List[Tensor], vector: bool
+        self,
+        nearest_neighbor_texts: List[str],
+        generated_token_embs: List[Tensor],
+        vector: bool,
     ) -> List[str]:
         if self.dataset == "mmlu":
             try:
@@ -884,7 +986,9 @@ class Agent:
                             last_embs_list.append(self.emb_table(emb[-1]))
                     else:
                         print("-----Warning: empty emb -----")
-                        emb_random = torch.rand_like(self.emb_table(torch.tensor(0)), device=self.device)
+                        emb_random = torch.rand_like(
+                            self.emb_table(torch.tensor(0)), device=self.device
+                        )
                         last_embs_list.append(emb_random)
 
                 last_embs = torch.stack(last_embs_list, dim=0)
@@ -894,7 +998,9 @@ class Agent:
 
                 dist = torch.cdist(last_embs, self.emb_choices, p=2)
                 min_dists, min_idxs = torch.min(dist, dim=1)
-                nearest_option_choice = [self.choices_mapper[str(idx.item())] for idx in min_idxs]
+                nearest_option_choice = [
+                    self.choices_mapper[str(idx.item())] for idx in min_idxs
+                ]
                 ## modify each element in nearest_neighbor_texts by replace the last letter by nearest_option_choice
                 updated_nearest_neighbor_texts = []
                 for text, choice in zip(nearest_neighbor_texts, nearest_option_choice):
@@ -920,7 +1026,8 @@ class Agent:
             agent_k = self.tokenizer(f"{agent_idx}").input_ids[-1]
             if self.engine.startswith("llama"):
                 agent_ks_solution = torch.tensor(
-                    [19661, 29871, agent_k, 29915, 29879, 1650, 29901], device=self.device
+                    [19661, 29871, agent_k, 29915, 29879, 1650, 29901],
+                    device=self.device,
                 )
             elif self.engine.startswith("falcon"):
                 agent_ks_solution = torch.tensor(
@@ -928,7 +1035,9 @@ class Agent:
                 )
             elif self.engine.startswith("mpt"):
                 agent_k = self.tokenizer(f" {agent_idx}'s").input_ids[0]
-                agent_ks_solution = torch.tensor([28172, agent_k, 434, 2900, 27, 2634], device=self.device)
+                agent_ks_solution = torch.tensor(
+                    [28172, agent_k, 434, 2900, 27, 2634], device=self.device
+                )
             elif self.engine.startswith("wizardmath"):
                 # agent_k = self.tokenizer(f" {agent_idx}").input_ids[0]
                 agent_ks_solution = torch.tensor(
@@ -940,7 +1049,9 @@ class Agent:
             agent_ks_solution_emb = self.emb_table(agent_ks_solution)
             return agent_ks_solution_emb
 
-        def get_debate_promp_emb(debate_prompt: str, _other_sol_embs: List[Tensor], _my_sol_emb: Tensor):
+        def get_debate_promp_emb(
+            debate_prompt: str, _other_sol_embs: List[Tensor], _my_sol_emb: Tensor
+        ):
             if self.engine.startswith("wizardmath"):
                 debate_prompt_emb = self._text_to_emb([debate_prompt], is_bos=False)[0]
             else:
@@ -1012,19 +1123,30 @@ class Agent:
 
             return res
 
-        backtick_start = torch.tensor([self.sep_token_ids["backtick_start"]], device=self.device)  ## : ```...
-        backtick_end = torch.tensor([self.sep_token_ids["backtick_end"]], device=self.device)  ## ...```\n
+        backtick_start = torch.tensor(
+            [self.sep_token_ids["backtick_start"]], device=self.device
+        )  ## : ```...
+        backtick_end = torch.tensor(
+            [self.sep_token_ids["backtick_end"]], device=self.device
+        )  ## ...```\n
 
         backtick_start_emb = self.emb_table(backtick_start)
         backtick_end_emb = self.emb_table(backtick_end)
         double_enters_emb = self.emb_table(self.sep_token_ids["double_enters"])
         your_solution_emb = self.emb_table(self.sep_token_ids["your_solution"])
         correct_solution_emb = self.emb_table(self.sep_token_ids["correct_solution"])
-        lets_think_step_by_step_emb = self.emb_table(self.sep_token_ids["lets_think_step_by_step"])
+        lets_think_step_by_step_emb = self.emb_table(
+            self.sep_token_ids["lets_think_step_by_step"]
+        )
         if self.engine.startswith("wizardmath"):
-            instruct_wizardmath = self.emb_table(self.sep_token_ids["instruct_wizardmath"])
+            instruct_wizardmath = self.emb_table(
+                self.sep_token_ids["instruct_wizardmath"]
+            )
 
-        embs = [get_debate_promp_emb(p, o, m) for p, o, m in zip(prompts, other_sol_embs_list, my_sol_embs)]
+        embs = [
+            get_debate_promp_emb(p, o, m)
+            for p, o, m in zip(prompts, other_sol_embs_list, my_sol_embs)
+        ]
         return embs  ## List of tensor, each has a shape of (1, t, d)
 
     def remove_promp_emb(self, embs: Tensor, promp_lens: List) -> List[Tensor]:
@@ -1059,7 +1181,10 @@ class Agent:
             prompts_nearest_neighbour = []
             for p in prompt_embs:
                 prompt_txt, _ = self._decode_embs_nearest_neighbour(
-                    rearrange(p, "t d-> () t d"), [0], self.context_length, early_stop=False
+                    rearrange(p, "t d-> () t d"),
+                    [0],
+                    self.context_length,
+                    early_stop=False,
                 )
 
                 prompts_nearest_neighbour.append(prompt_txt[0])
@@ -1067,12 +1192,14 @@ class Agent:
 
         prompt_lens = [len(t) for t in prompt_embs]
 
-        all_token_embs, human_readable_texts, token_embs_llama1_vs_llama2 = self._generate_embs(
-            prompt_embs=prompt_embs,
-            temperature=temperature,
-            top_p_emb=top_p_emb,
-            l2_norm=l2_norm,
-            top_k_emb=top_k_emb,
+        all_token_embs, human_readable_texts, token_embs_llama1_vs_llama2 = (
+            self._generate_embs(
+                prompt_embs=prompt_embs,
+                temperature=temperature,
+                top_p_emb=top_p_emb,
+                l2_norm=l2_norm,
+                top_k_emb=top_k_emb,
+            )
         )
 
         nearest_neighbor_texts, stop_idxs = self._decode_embs_nearest_neighbour(
@@ -1080,14 +1207,18 @@ class Agent:
         )
 
         if token_embs_llama1_vs_llama2 is not None:  ## llama 1 vs llama 2
-            other_generated_token_embs = self.remove_promp_emb(token_embs_llama1_vs_llama2, prompt_lens)
+            other_generated_token_embs = self.remove_promp_emb(
+                token_embs_llama1_vs_llama2, prompt_lens
+            )
             other_generated_token_embs = [
                 emb[:stop] for emb, stop in zip(other_generated_token_embs, stop_idxs)
             ]
         else:
             other_generated_token_embs = None
         generated_token_embs = self.remove_promp_emb(all_token_embs, prompt_lens)
-        generated_token_embs = [emb[:stop] for emb, stop in zip(generated_token_embs, stop_idxs)]
+        generated_token_embs = [
+            emb[:stop] for emb, stop in zip(generated_token_embs, stop_idxs)
+        ]
 
         ## Map the last embedding to A, B, C, D if the dataset is mmlu
         if not self.no_convert_ans_choice:
@@ -1098,7 +1229,9 @@ class Agent:
         if convert_to_cpu:
             generated_token_embs = [emb.cpu() for emb in generated_token_embs]
             if other_generated_token_embs is not None:
-                other_generated_token_embs = [emb.cpu() for emb in other_generated_token_embs]
+                other_generated_token_embs = [
+                    emb.cpu() for emb in other_generated_token_embs
+                ]
         return {
             "emb": generated_token_embs,
             "other_emb": other_generated_token_embs,
@@ -1123,7 +1256,9 @@ class Agent:
         next_token = torch.gather(probs_idx, -1, next_token)
         return next_token
 
-    def _get_probs_after_top_p_k_emb(self, probs: Tensor, top_p_emb: float, top_k_emb: int) -> Tensor:
+    def _get_probs_after_top_p_k_emb(
+        self, probs: Tensor, top_p_emb: float, top_k_emb: int
+    ) -> Tensor:
         """
         probs: (b, vocab_size).
         top_k_emb: keep top k with the highest probs

@@ -49,20 +49,25 @@ def get_args():
     parser.add_argument(
         "--debaters",
         type=type_list("str"),
-        help="List of debaters, choices: falcon-7b-instruct, falcon-40b-instruct,\
-        llama_7B, llama_13B, llama_30B, llama_65B, llama_7B_expert, llama_65B_expert\
-        Llama-2-70b-hf, Llama-2-70b-chat-hf,  Llama-2-70b-hf_expert, Llama-2-70b-chat-hf_expert, Llama-2-70b-hf_dummy_expert",
-        default=["llama_7B", "llama_7B"],  ##["falcon-40b-instruct", "llama_65B"],
+        default=["llama3", "llama3"],  ##["falcon-40b-instruct", "llama_65B"],
     )
 
     ## TODO: add judge to finalize the final answer.
-    parser.add_argument("--judge", type=str, help="same choices as debaters", default=None)
+    parser.add_argument(
+        "--judge", type=str, help="same choices as debaters", default=None
+    )
 
-    parser.add_argument("--n_questions", type=int, help="Number of questions", default=None)
+    # parser.add_argument(
+    #     "--n_questions", type=int, help="Number of questions", default=None
+    # )
 
-    parser.add_argument("--n_ray_actors", type=int, help="Number parallel actors", default=2)
+    parser.add_argument(
+        "--n_ray_actors", type=int, help="Number parallel actors", default=2
+    )
 
-    parser.add_argument("--n_gpus_per_actor", type=int, help="Number GPUs per actors", default=4)
+    parser.add_argument(
+        "--n_gpus_per_actor", type=int, help="Number GPUs per actors", default=4
+    )
 
     parser.add_argument("--partial_thres", type=float, default=0.85)
 
@@ -106,7 +111,7 @@ def get_args():
         "--debate_prompt_paths",
         type=type_list("str"),
         help="Path to the debate prompt file",
-        default=["prompts/gsm8k/debate_3shot_llama_2debaters.txt"],
+        default=["prompts_v2/gsm8k/debate_3shot_llama_2debaters.txt"],
     )
 
     parser.add_argument(
@@ -123,9 +128,13 @@ def get_args():
         default=[0.85],
     )
 
-    parser.add_argument("--max_new_tokens", type=int, help="Maximum number of new tokens", default=400)
+    parser.add_argument(
+        "--max_new_tokens", type=int, help="Maximum number of new tokens", default=400
+    )
 
-    parser.add_argument("--load_in_8bit", action="store_true", help="Load in 8bit", default=False)
+    parser.add_argument(
+        "--load_in_8bit", action="store_true", help="Load in 8bit", default=False
+    )
     parser.add_argument(
         "--positional_bias",
         action="store_true",
@@ -151,17 +160,22 @@ def get_args():
 
     # Default 1. If more than 1, we will sample `sampling` answers for each question,
     # and use majority vote to have a final answer. it stops after round 0.
-    parser.add_argument("--n_sols_each_ques", type=int, help="Sampling method", default=1)
+    parser.add_argument(
+        "--n_sols_each_ques", type=int, help="Sampling method", default=1
+    )
 
     # This is used when `sampling` is set to 1
     parser.add_argument("--n_rounds", type=int, help="Number of rounds", default=3)
 
-    parser.add_argument("--seed", type=int, default=None)
-    parser.add_argument("--data_sample_seed", type=int, default=2023)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--data_sample_seed", type=int, default=0)
+    parser.add_argument("--custom_range", type=str, default="501-1000")
     parser.add_argument("--temperature_min", type=float, default=0.01)
     parser.add_argument("--temperature_max", type=float, default=1.0)
 
-    parser.add_argument("--debug", action="store_true", help="Debug mode", default=False)
+    parser.add_argument(
+        "--debug", action="store_true", help="Debug mode", default=False
+    )
 
     parser.add_argument("--root_dir", type=str, default="./")
     parser.add_argument("--bayesian_json_log", type=str, default="")
@@ -173,7 +187,7 @@ def get_args():
         choices=["major_last_round", "major_debate_acc", "major_all_rounds"],
     )
 
-    parser.add_argument("--data_path", type=str, default="data/gsm/test_gsm8k_full.jsonl")
+    parser.add_argument("--data_path", type=str, default="data/gsm8k/test.jsonl")
 
     parser.add_argument("-b", "--batch_size", type=int, default=16)
 
@@ -195,7 +209,9 @@ def get_args():
     )
 
     ## add top_p_emb
-    parser.add_argument("--top_p_emb", type=float, default=1.0, help=">=1 mean not using")
+    parser.add_argument(
+        "--top_p_emb", type=float, default=1.0, help=">=1 mean not using"
+    )
 
     parser.add_argument("--top_k_emb", type=int, default=-1, help="-1 mean not using")
 
@@ -225,15 +241,17 @@ def run_majority_vote(
     for sol_i in range(n_sols):
         if not use_ray:
             ## give a direct answer
-            answer_batch, answer_batch_ans_token, prompt_batch = agent.give_first_solutions(
-                questions=questions,
-                temperature=temperature,
-                top_p=top_p,
-                vector_language=False,
-                top_p_emb=top_p_emb,
-                l2_norm=l2_norm,
-                top_k_emb=top_k_emb,
-                early_stop=early_stop,
+            answer_batch, answer_batch_ans_token, prompt_batch = (
+                agent.give_first_solutions(
+                    questions=questions,
+                    temperature=temperature,
+                    top_p=top_p,
+                    vector_language=False,
+                    top_p_emb=top_p_emb,
+                    l2_norm=l2_norm,
+                    top_k_emb=top_k_emb,
+                    early_stop=early_stop,
+                )
             )
         else:
             handler = agent.give_first_solutions.remote(
@@ -252,7 +270,9 @@ def run_majority_vote(
         if sol_i == 0:
             print_out(f"\n========={agent_name}: prompt sol: \n{prompt_batch}=========")
 
-        print_out(f"\n========={agent_name}: answer sol {sol_i+1}: \n{answer_batch}=========")
+        print_out(
+            f"\n========={agent_name}: answer sol {sol_i+1}: \n{answer_batch}========="
+        )
         for ques, answer_ans_token in zip(questions, answer_batch_ans_token):
             sol_history_batch_ans_token[ques].append(answer_ans_token)
 
@@ -285,7 +305,9 @@ def run_multiagent_debate(
         """
         all_ans = []
         for agent_i, agent_name in enumerate(debaters):
-            all_ans.append([sol_history[f"{agent_name}_{agent_i}"][i] for i in range(n_rounds)])
+            all_ans.append(
+                [sol_history[f"{agent_name}_{agent_i}"][i] for i in range(n_rounds)]
+            )
         res = {ques: (*all_ans, gt)}
         return res
 
@@ -293,7 +315,9 @@ def run_multiagent_debate(
     other_sol_history_batch = OrderedDict()  ## for llama1_vs_llama2
     sol_history_batch_text = OrderedDict()
     for ques in questions:
-        sol_history = {f"{agent_name}_{agent_i}": {} for agent_i, agent_name in enumerate(debaters)}
+        sol_history = {
+            f"{agent_name}_{agent_i}": {} for agent_i, agent_name in enumerate(debaters)
+        }
         sol_history_batch[ques] = sol_history
         other_sol_history_batch[ques] = deepcopy(sol_history)
         sol_history_batch_text[ques] = deepcopy(sol_history)
@@ -355,7 +379,8 @@ def run_multiagent_debate(
                     prev_sols_batch = []
                     for ques in questions:
                         prev_sols = tuple(
-                            sol_history_batch[ques][f"{name}_{i}"][r - 1] for i, name in enumerate(debaters)
+                            sol_history_batch[ques][f"{name}_{i}"][r - 1]
+                            for i, name in enumerate(debaters)
                         )
                         prev_sols_batch.append(prev_sols)
                     if llama1_vs_llama2 and vector_language:
@@ -403,18 +428,24 @@ def run_multiagent_debate(
 
             if vector_language:
                 answer_batch = res_tmp["emb"]
-                other_answer_batch = res_tmp.get("other_emb", None)  ## List[tensor] or None
+                other_answer_batch = res_tmp.get(
+                    "other_emb", None
+                )  ## List[tensor] or None
                 prompt_batch = res_tmp["prompt"]
                 answer_nearest_batch = res_tmp["nearest_neighbor_texts"]
             else:
                 answer_batch, answer_batch_ans_token, prompt_batch = res_tmp
                 other_answer_batch = None
 
-            print_out(f"\n====={agent_name}_{agent_i}, temp={agent_temp}: prompt round {r}: =====")
+            print_out(
+                f"\n====={agent_name}_{agent_i}, temp={agent_temp}: prompt round {r}: ====="
+            )
             print_out(prompt_batch)
 
             if not vector_language:
-                print_out(f"\n====={agent_name}_{agent_i}, temp={agent_temp}: answer round {r}: =====")
+                print_out(
+                    f"\n====={agent_name}_{agent_i}, temp={agent_temp}: answer round {r}: ====="
+                )
                 print_out(answer_batch_ans_token)
             if vector_language:
                 print_out(f"temperature={agent_temp}")
@@ -425,7 +456,9 @@ def run_multiagent_debate(
                 # print_out(res_tmp["human_readable_texts"])
 
             ## log the answer of each agent
-            answer_texts = answer_nearest_batch if vector_language else answer_batch_ans_token
+            answer_texts = (
+                answer_nearest_batch if vector_language else answer_batch_ans_token
+            )
             for ques, answer, answer_txt in zip(questions, answer_batch, answer_texts):
                 sol_history_batch[ques][f"{agent_name}_{agent_i}"][
                     r
@@ -437,7 +470,9 @@ def run_multiagent_debate(
 
             if other_answer_batch is not None:
                 for ques, other_answer in zip(questions, other_answer_batch):
-                    other_sol_history_batch[ques][f"{agent_name}_{agent_i}"][r] = other_answer
+                    other_sol_history_batch[ques][f"{agent_name}_{agent_i}"][
+                        r
+                    ] = other_answer
 
     ## collect answers for all questions
     res = {}
@@ -461,16 +496,16 @@ def print_out(x):
 
 def debate_helper(args, dataloader, agents: Optional[Dict] = None):
     ## for ablation: LLaMA1 vs. LLaMA2
-    if set(args.debaters) == set(["Llama-2-70b-hf", "llama_65B"]) or set(args.debaters) == set(
-        ["Llama-2-7b-hf", "llama_7B"]
-    ):
+    if set(args.debaters) == set(["Llama-2-70b-hf", "llama_65B"]) or set(
+        args.debaters
+    ) == set(["Llama-2-7b-hf", "llama_7B"]):
         other_agent_embedding = True
     else:
         other_agent_embedding = False  # False
 
     debaters = args.debaters
     n_debaters = len(debaters)
-    n_ques = args.n_questions
+    # n_ques = args.n_questions
     initial_prompt_paths = maybe_duplicate(args.initial_prompt_paths, n_debaters)
     debate_prompt_paths = maybe_duplicate(args.debate_prompt_paths, n_debaters)
 
@@ -508,7 +543,7 @@ def debate_helper(args, dataloader, agents: Optional[Dict] = None):
     # top_ps_str = "-".join([str(x) for x in top_ps])
     use_vector_language = "vec" if vector_language else "human"
 
-    log_file_detailed_name = f"id{trial}_{n_debaters}{debaters[0]}{debaters[1]}_{dataset_name}_{filename}_{use_vector_language}_{args.seed}_nsols{n_sols}_r{n_rounds}_temp{temps_str}_nques{n_ques}.json"
+    log_file_detailed_name = f"id{trial}_{n_debaters}{debaters[0]}{debaters[1]}_{dataset_name}_{filename}_{use_vector_language}_{args.seed}_nsols{n_sols}_r{n_rounds}_temp{temps_str}_custom_{args.custom_range}.json"
 
     global log_file_detailed
     log_file_detailed = os_join(
@@ -523,16 +558,16 @@ def debate_helper(args, dataloader, agents: Optional[Dict] = None):
     if n_sols == 1:
         assert all(
             f"{n_debaters}debaters" in path for path in debate_prompt_paths
-        ), "check again on the debate templates!"
+        ), f"check again on the debate templates! Missing '{n_debaters}debaters' from {debate_prompt_paths}!"
 
     if vector_language:
         assert all(
             "vector_language" in path for path in debate_prompt_paths
-        ), "check again on the debate templates!"
+        ), f"check again on the debate templates! Missing 'vector_language' from {debate_prompt_paths}!"
     else:
         assert all(
             "vector_language" not in path for path in debate_prompt_paths
-        ), "check again on the debate templates!"
+        ), f"check again on the debate templates! Should not have 'vector_language' from {debate_prompt_paths}!"
 
     if args.positional_bias:
         debate_prompt_paths_bias = []
@@ -553,7 +588,9 @@ def debate_helper(args, dataloader, agents: Optional[Dict] = None):
     ## Initialize agents
     if n_ray_actors > 1:
         AgentClass = (
-            ray.remote(Agent).options(num_gpus=n_gpus_per_actor, num_cpus=n_gpus_per_actor * 3).remote
+            ray.remote(Agent)
+            .options(num_gpus=n_gpus_per_actor, num_cpus=n_gpus_per_actor * 3)
+            .remote
         )
     else:
         AgentClass = Agent
@@ -603,7 +640,9 @@ def debate_helper(args, dataloader, agents: Optional[Dict] = None):
                 )
 
                 agents[agent_name] = agent
-                print_out(f"done loading {agent_path} in { (time.time()-start)/60} mins")
+                print_out(
+                    f"done loading {agent_path} in { (time.time()-start)/60} mins"
+                )
 
     temperatures_dict = {
         f"{debater}_{i}": temperatures[i * n_rounds : (i + 1) * n_rounds]
@@ -621,7 +660,7 @@ def debate_helper(args, dataloader, agents: Optional[Dict] = None):
         gts = ensure_list(gts)
 
         print_out(f"================================================")
-        print_out(f"batch {(i+1)}/{len(dataloader)}; total #questions={n_ques}")
+        print_out(f"batch {(i+1)}/{len(dataloader)}")
         print_out("questions:")
         print_out(questions)
         print_out("ground truth: ")
@@ -662,11 +701,11 @@ def debate_helper(args, dataloader, agents: Optional[Dict] = None):
             )
         generated_description.update(res_dict)
 
-    new_dir = os_join(root_dir, "output", "log_" + datetime_short)
+    new_dir = os_join(root_dir, "results", "log_" + datetime_short)
     if not os.path.exists(new_dir):
         # os.makedirs(new_dir)  ## permission denied error
         ## work around
-        new_dir = os_join(root_dir, "output", "log_2023-others")
+        new_dir = os_join(root_dir, "results", "log_2023-others")
 
     # output_path = os_join(new_dir, output_name)
     # json.dump(generated_description, open(output_path, "w"))
@@ -696,7 +735,7 @@ def debate(args: Optional[Namespace] = None, agents: Optional[Dict] = None) -> s
         args = get_args()
     print(args)
 
-    n_ques = args.n_questions
+    # n_ques = args.n_questions
     data_path = args.data_path
     batch_size = args.batch_size
     dataset_name = args.dataset
@@ -704,13 +743,21 @@ def debate(args: Optional[Namespace] = None, agents: Optional[Dict] = None) -> s
 
     ## Prepare dataset
     if dataset_name == "gsm8k":
-        dataset = GSM8K(input_path=data_path, n_ques=n_ques, seed=args.data_sample_seed)
-    elif dataset_name == "mmlu":
-        dataset = MMLU(input_path=data_path, n_ques=n_ques, seed=args.data_sample_seed)
-    elif dataset_name == "arithmetic":
-        dataset = Arithmetic(input_path=data_path, n_ques=n_ques, seed=args.data_sample_seed)
-    elif dataset_name == "biography":
-        dataset = Biography(input_path=data_path, n_ques=n_ques, seed=args.data_sample_seed)
+        dataset = GSM8K(
+            input_path=data_path,
+            custom_range=args.custom_range,
+            seed=args.data_sample_seed,
+        )
+    # elif dataset_name == "mmlu":
+    #     dataset = MMLU(input_path=data_path, n_ques=n_ques, seed=args.data_sample_seed)
+    # elif dataset_name == "arithmetic":
+    #     dataset = Arithmetic(
+    #         input_path=data_path, n_ques=n_ques, seed=args.data_sample_seed
+    #     )
+    # elif dataset_name == "biography":
+    #     dataset = Biography(
+    #         input_path=data_path, n_ques=n_ques, seed=args.data_sample_seed
+    #     )
     else:
         raise NotImplementedError()
 
@@ -728,7 +775,11 @@ def debate(args: Optional[Namespace] = None, agents: Optional[Dict] = None) -> s
 
         for sub_dataset in dataset_list:
             dataloader = DataLoader(
-                sub_dataset, batch_size=batch_size, shuffle=False, num_workers=8, drop_last=False
+                sub_dataset,
+                batch_size=batch_size,
+                shuffle=False,
+                num_workers=8,
+                drop_last=False,
             )
             handler = debate_helper_func(args, dataloader, agents)
             handlers.append(handler)
@@ -737,19 +788,25 @@ def debate(args: Optional[Namespace] = None, agents: Optional[Dict] = None) -> s
             done_id, handlers = ray.wait(handlers)
             res.update(ray.get(done_id[0]))
     else:
-        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=8, drop_last=False)
+        dataloader = DataLoader(
+            dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=8,
+            drop_last=False,
+        )
         generated_description = debate_helper(args, dataloader, agents)
         res.update(generated_description)
 
     datetime_short = datetime_now("%Y-%b-%d")
-    new_dir = os_join(args.root_dir, "output", "log_" + datetime_short)
+    new_dir = os_join(args.root_dir, "results", "log_" + datetime_short)
     if not os.path.exists(new_dir):
         try:
             os.makedirs(new_dir, exist_ok=True)  ## permission denied error
         except Exception as e:
             ## work around
             print(e)
-            new_dir = os_join(args.root_dir, "output", "log_2023-others")
+            new_dir = os_join(args.root_dir, "results", "log_2023-others")
 
     # extract filename from `data_path`
     filename = data_path.split("/")[-1].split(".")[0]
@@ -773,7 +830,7 @@ def debate(args: Optional[Namespace] = None, agents: Optional[Dict] = None) -> s
         use_partial_cipher = "_partial"
 
     partial_thres = args.partial_thres
-    output_name = f"id{trial}_{n_debaters}{args.debaters[0]}_{args.debaters[1]}_{dataset_name}_{filename}_seed{args.seed}_{use_vector_language}_nsols{args.n_sols_each_ques}_r{args.n_rounds}_temp{temps_str}_nques{n_ques}_{datetime_now()}{positional_bias_str}{use_partial_cipher}{partial_thres}{entropy}.json"
+    output_name = f"id{trial}_{n_debaters}{args.debaters[0]}_{args.debaters[1]}_{dataset_name}_{filename}_seed{args.seed}_{use_vector_language}_nsols{args.n_sols_each_ques}_r{args.n_rounds}_temp{temps_str}_custom_{args.custom_range}_{positional_bias_str}{use_partial_cipher}{partial_thres}{entropy}.json"
 
     ## make sure it is fewer than 255 characters
     output_name = output_name[:255]
@@ -833,17 +890,26 @@ def evaluate_run(json_path: str, criterion: str) -> float:
 def run_baysian_opt(config):
     def run_debate_then_evaluate(**kawgs) -> float:
         ## hyper-params
-        temperatures = [kawgs[f"temperature_{i+1}"] for i in range(len(config.debaters))]
+        temperatures = [
+            kawgs[f"temperature_{i+1}"] for i in range(len(config.debaters))
+        ]
 
         ## update temperature_1 in new args
         n_rounds = config.n_rounds
         config.temperatures = [-1] * n_rounds * len(config.debaters)
         for d in range(len(config.debaters)):
-            config.temperatures[d * n_rounds : (d + 1) * n_rounds] = [temperatures[d]] * n_rounds
+            config.temperatures[d * n_rounds : (d + 1) * n_rounds] = [
+                temperatures[d]
+            ] * n_rounds
 
         ## check if new_config.temperatures is sorted accendingly
-        if len(config.debaters) == 2 and sorted(config.temperatures) != config.temperatures:
-            print("skip this run for 2 agents because order doesn't matter in this case")
+        if (
+            len(config.debaters) == 2
+            and sorted(config.temperatures) != config.temperatures
+        ):
+            print(
+                "skip this run for 2 agents because order doesn't matter in this case"
+            )
             print(f"temps={config.temperatures}")
             acc = -1
         else:
@@ -879,9 +945,17 @@ def run_baysian_opt(config):
     optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
 
     if config.bayesian_json_log is not None and config.bayesian_json_log != "":
-        print("Before loading checkpoint: optimizer is aware of {} points.".format(len(optimizer.space)))
+        print(
+            "Before loading checkpoint: optimizer is aware of {} points.".format(
+                len(optimizer.space)
+            )
+        )
         load_logs(optimizer, logs=[config.bayesian_json_log])
-        print("Loaded checkpoint! The optimizer is now aware of {} points.".format(len(optimizer.space)))
+        print(
+            "Loaded checkpoint! The optimizer is now aware of {} points.".format(
+                len(optimizer.space)
+            )
+        )
 
     init_points = config.bayesian_num_init_points
     optimizer.maximize(init_points=init_points, n_iter=config.num_points - init_points)
@@ -918,9 +992,13 @@ if __name__ == "__main__":
             print_out(f"-----++++++++++++ temp_points: {temp_points_list}")
 
             for i, temp_points in enumerate(temp_points_list):
-                print_out(f"================== point {i+1}/{len(temp_points_list)} ==================")
+                print_out(
+                    f"================== point {i+1}/{len(temp_points_list)} =================="
+                )
                 if len(temp_points) < len(args.debaters) * args.n_rounds:
-                    args.temperatures = duplicate_temp(args.n_rounds, len(args.debaters), temp_points)
+                    args.temperatures = duplicate_temp(
+                        args.n_rounds, len(args.debaters), temp_points
+                    )
                 else:
                     args.temperatures = temp_points
                 if original_seed is None:
@@ -928,5 +1006,7 @@ if __name__ == "__main__":
                 debate(args)
     else:
         if len(args.temperatures) < len(args.debaters) * args.n_rounds:
-            args.temperatures = duplicate_temp(args.n_rounds, len(args.debaters), args.temperatures)
+            args.temperatures = duplicate_temp(
+                args.n_rounds, len(args.debaters), args.temperatures
+            )
         debate(args)

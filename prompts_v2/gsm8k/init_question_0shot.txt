@@ -1,0 +1,4 @@
+Can you solve the math question? Explain your reasoning step by step. Write your final answer as a numerical number, in the form ```Answer: {number}```, at the end of your response.
+
+Question: ```{QUESTION_PLACEHOLDER}```
+Solution is ```

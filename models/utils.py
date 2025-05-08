@@ -43,28 +43,31 @@ def datetime_now(time_format: Optional[str] = None) -> str:
 
 
 def get_model_path(model_name, hdfs: bool = False):
-    with open("config.yml", "r") as yaml_file:
-        yaml_config = yaml.safe_load(yaml_file)
-
     if not hdfs:
-        model_name = model_name.replace("_expert", "").replace("_dummy", "")
-        if model_name.startswith("Llama-2"):
-            model_path = yaml_config["llama2_model_path"].format(model_name=model_name)
-        elif model_name.startswith("llama"):
-            model_path = yaml_config["llama1_model_path"].format(model_name=model_name)
-        elif model_name.startswith("falcon"):
-            model_path = yaml_config["falcon_model_path"].format(model_name=model_name)
-        elif model_name.startswith("dummy") or model_name.startswith("expert"):
-            return ""
-        elif model_name.startswith("mpt"):
-            model_path = yaml_config["mpt_model_path"].format(model_name=model_name)
-        elif model_name.startswith("WizardMath"):
-            model_path = yaml_config["wizardmath_model_path"].format(model_name=model_name)
-        else:
-            raise ValueError(f"Invalid model name {model_name}")
+        if model_name == "mistral":
+            # model_str = "mistralai/Mistral-7B-Instruct-v0.2"
+            model_str = "mistralai/Ministral-8B-Instruct-2410"
+        elif model_name == "llama3":
+            # model_str = "meta-llama/Meta-Llama-3-8B"
+            model_str = "meta-llama/Meta-Llama-3-8B-Instruct"
+        elif model_name == "ds-llama3":
+            model_str = "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
+        elif model_name == "phi3":
+            model_str = "microsoft/Phi-3-mini-128k-instruct"
+        elif model_name == "qwen3-0_6b":
+            model_str = "Qwen/Qwen3-0.6B"
+        elif model_name == "qwen3-1_7b":
+            model_str = "Qwen/Qwen3-1.7B"
+        elif model_name == "phi4":
+            model_str = "microsoft/Phi-4-mini-instruct"
+        elif model_name == "gpt2":
+            model_str = "gpt2"
+        elif model_name == "llama7b":
+            model_str = "meta-llama/Llama-2-7b-chat-hf"
     else:
         return model_name
-    return model_path
+
+    return model_str
 
 
 def read_jsonl(path: str):
