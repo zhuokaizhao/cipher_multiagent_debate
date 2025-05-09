@@ -1,0 +1,17 @@
+numpy
+openai
+pandas
+python-dotenv
+torch
+tqdm
+transformers
+accelerate
+einops
+sentencepiece
+gpustat
+bayesian-optimization
+ipython
+ray
+optimum
+Fraction
+pyyaml
