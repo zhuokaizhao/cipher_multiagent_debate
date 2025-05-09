@@ -96,7 +96,7 @@ def get_args():
         "--initial_prompt_paths",
         type=type_list("str"),
         help="Path to the initial prompt file",
-        default=["prompts/gsm8k/init_question_3shot_v3.txt"],
+        default=["prompts/gsm8k/init_question_0shot.txt"],
     )
 
     parser.add_argument(
@@ -111,7 +111,7 @@ def get_args():
         "--debate_prompt_paths",
         type=type_list("str"),
         help="Path to the debate prompt file",
-        default=["prompts_v2/gsm8k/debate_3shot_llama_2debaters.txt"],
+        default=["prompts_v2/gsm8k/debate_3debaters_v1.txt"],
     )
 
     parser.add_argument(
@@ -745,6 +745,7 @@ def debate(args: Optional[Namespace] = None, agents: Optional[Dict] = None) -> s
     if dataset_name == "gsm8k":
         dataset = GSM8K(
             input_path=data_path,
+            data_name=dataset_name,
             custom_range=args.custom_range,
             seed=args.data_sample_seed,
         )
@@ -759,7 +760,7 @@ def debate(args: Optional[Namespace] = None, agents: Optional[Dict] = None) -> s
     #         input_path=data_path, n_ques=n_ques, seed=args.data_sample_seed
     #     )
     else:
-        raise NotImplementedError()
+        raise NotImplementedError(f"Dataset {dataset_name} not implemented")
 
     ## split the dataset into n_ray_actors
     dataset_list = []
