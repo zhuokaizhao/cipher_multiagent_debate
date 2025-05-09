@@ -227,7 +227,6 @@ class Agent:
             LLaMA = AutoModelForCausalLM
             # self.tokenizer = LlamaTokenizer.from_pretrained(agent_path)
             self.tokenizer = AutoTokenizer.from_pretrained(agent_path)
-            # self.tokenizer.pad_id = self.tokenizer.eos_token_id
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
             # https://github.com/huggingface/transformers/blob/476be08c4aa96f8c1cae4200d2677bbe8f12cf80/src/transformers/models/llama/modeling_llama.py#L727C1-L727C1
@@ -282,10 +281,8 @@ class Agent:
 
             self.agent = BetterTransformer.transform(agent, keep_original_model=True)
 
-            # Setting `pad_token_id` to `eos_token_id`:11 for open-end generation.
-            self.tokenizer.pad_id = self.tokenizer.pad_token_id = (
-                self.tokenizer.eos_token_id
-            )
+            # Setting `pad_token` to `eos_token` for open-end generation.
+            self.tokenizer.pad_token = self.tokenizer.eos_token
             self.emb_table = self.agent.transformer.word_embeddings
             self.emb_table_norm = F.normalize(self.emb_table.weight, p=2, dim=-1)
 
@@ -297,9 +294,7 @@ class Agent:
                 device_map="auto",
                 load_in_8bit=self.load_in_8bit,
             )
-            self.tokenizer.pad_id = self.tokenizer.pad_token_id = (
-                self.tokenizer.eos_token_id
-            )
+            self.tokenizer.pad_token = self.tokenizer.eos_token
             self.emb_table = self.agent.transformer.wte  # Embedding(50432, 7168)
             self.emb_table_norm = F.normalize(self.emb_table.weight, p=2, dim=-1)
         else:
@@ -599,11 +594,11 @@ class Agent:
 
         total_len = self.max_new_tokens + max_prompt_size
         tokens = (
-            torch.full((bsz, total_len), self.tokenizer.pad_id).cuda().long()
+            torch.full((bsz, total_len), self.tokenizer.pad_token).cuda().long()
         )  ## type: ignore
         for k, t in enumerate(prompt_tokens):
             tokens[k, : len(t)] = t
-        input_text_mask = tokens != self.tokenizer.pad_id  ## type: ignore
+        input_text_mask = tokens != self.tokenizer.pad_token  ## type: ignore
         start_pos = min_prompt_size
         prev_pos = 0
         past_key_values = None
@@ -705,7 +700,7 @@ class Agent:
         ## cut off the answer when it meets one of these tokens
 
         backtick_end = self.sep_token_ids["backtick_end"]
-        eos = self.tokenizer.eos_token_id
+        eos = self.tokenizer.eos_token
 
         ## replace all 32000 in tokens by 2
         if self.engine.startswith("wizardmath"):
@@ -797,7 +792,7 @@ class Agent:
 
         all_token_embs = torch.full(
             (bsz, total_len, dim),
-            self.tokenizer.pad_id,
+            self.tokenizer.pad_token,
             device=self.device,  ## type: ignore
         ).to(torch.float16)
         input_text_mask = torch.full((bsz, total_len), False, device=self.device).to(bool)  # type: ignore

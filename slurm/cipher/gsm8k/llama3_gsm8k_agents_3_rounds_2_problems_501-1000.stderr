@@ -1,24 +1,0 @@
-/data/home/zhuokai/miniconda3/envs/cipher/lib/python3.10/site-packages/huggingface_hub/file_download.py:943: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
-  warnings.warn(
-Downloading shards:   0%|          | 0/4 [00:00<?, ?it/s]Downloading shards:  25%|██▌       | 1/4 [01:04<03:14, 64.76s/it]Downloading shards:  50%|█████     | 2/4 [02:09<02:09, 64.52s/it]Downloading shards:  75%|███████▌  | 3/4 [02:59<00:58, 58.26s/it]Downloading shards: 100%|██████████| 4/4 [03:15<00:00, 41.27s/it]Downloading shards: 100%|██████████| 4/4 [03:15<00:00, 48.79s/it]
-The model weights are not tied. Please use the `tie_weights` method before using the `infer_auto_device` function.
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:36<01:48, 36.29s/it]Loading checkpoint shards:  50%|█████     | 2/4 [01:21<01:23, 41.64s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [02:02<00:41, 41.15s/it]Loading checkpoint shards: 100%|██████████| 4/4 [02:12<00:00, 28.96s/it]Loading checkpoint shards: 100%|██████████| 4/4 [02:12<00:00, 33.13s/it]
-0it [00:00, ?it/s]0it [00:00, ?it/s]
-Traceback (most recent call last):
-  File "/opt/hpcaas/.mounts/fs-007ec3c997706a84a/zhuokai/cipher_multiagent_debate/run_debate.py", line 1012, in <module>
-    debate(args)
-  File "/opt/hpcaas/.mounts/fs-007ec3c997706a84a/zhuokai/cipher_multiagent_debate/run_debate.py", line 798, in debate
-    generated_description = debate_helper(args, dataloader, agents)
-  File "/opt/hpcaas/.mounts/fs-007ec3c997706a84a/zhuokai/cipher_multiagent_debate/run_debate.py", line 686, in debate_helper
-    res_dict = run_multiagent_debate(
-  File "/opt/hpcaas/.mounts/fs-007ec3c997706a84a/zhuokai/cipher_multiagent_debate/run_debate.py", line 363, in run_multiagent_debate
-    res_tmp = agent.give_first_solutions(
-  File "/opt/hpcaas/.mounts/fs-007ec3c997706a84a/zhuokai/cipher_multiagent_debate/models/agent.py", line 440, in give_first_solutions
-    generated_text, generated_text_ans_token = self.generate_outputs_human(
-  File "/opt/hpcaas/.mounts/fs-007ec3c997706a84a/zhuokai/cipher_multiagent_debate/models/agent.py", line 763, in generate_outputs_human
-    all_generated_tokens = self._generate_tokens(prompt_tokens, temperature, top_p)
-  File "/data/home/zhuokai/miniconda3/envs/cipher/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 115, in decorate_context
-    return func(*args, **kwargs)
-  File "/opt/hpcaas/.mounts/fs-007ec3c997706a84a/zhuokai/cipher_multiagent_debate/models/agent.py", line 602, in _generate_tokens
-    torch.full((bsz, total_len), self.tokenizer.pad_id).cuda().long()
-AttributeError: 'PreTrainedTokenizerFast' object has no attribute 'pad_id'
