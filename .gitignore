@@ -1,6 +1,7 @@
 # Created by https://www.toptal.com/developers/gitignore/api/macos,visualstudiocode,jupyternotebooks,linux
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,visualstudiocode,jupyternotebooks,linux
 
+__pycache__
 scripts/**/*.slurm
 slurm/*
 
