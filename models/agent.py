@@ -215,93 +215,93 @@ class Agent:
         else:
             self.context_length = 4096
         self.other_emb = None
-        if "llama" in self.engine or "wizardmath" in self.engine:
-            # ## Hugging face changed the code of LLaMA class to support LLaMA2.
-            # ## to make sure the results are reproducible on LLaMA1, I keep the old version of LLaMA class (i.e, LlamaHFv1) as a separate file.
-            # if "llama-2" in self.engine:
-            #     LLaMA = LlamaForCausalLM  ## support LLaMA2. transformer 4.31.0
-            # else:
-            #     LLaMA = LlamaHFv1  ## only LLaMA. transformer 4.30.0
+        # if "llama" in self.engine or "wizardmath" in self.engine:
+        # ## Hugging face changed the code of LLaMA class to support LLaMA2.
+        # ## to make sure the results are reproducible on LLaMA1, I keep the old version of LLaMA class (i.e, LlamaHFv1) as a separate file.
+        # if "llama-2" in self.engine:
+        #     LLaMA = LlamaForCausalLM  ## support LLaMA2. transformer 4.31.0
+        # else:
+        #     LLaMA = LlamaHFv1  ## only LLaMA. transformer 4.30.0
 
-            print("self.context_length", self.context_length)
-            LLaMA = AutoModelForCausalLM
-            # self.tokenizer = LlamaTokenizer.from_pretrained(agent_path)
-            self.tokenizer = AutoTokenizer.from_pretrained(agent_path)
-            self.tokenizer.pad_token = self.tokenizer.eos_token
-            self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
+        print("self.context_length", self.context_length)
+        LLaMA = AutoModelForCausalLM
+        # self.tokenizer = LlamaTokenizer.from_pretrained(agent_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(agent_path)
+        self.tokenizer.pad_token = self.tokenizer.eos_token
+        self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
-            # https://github.com/huggingface/transformers/blob/476be08c4aa96f8c1cae4200d2677bbe8f12cf80/src/transformers/models/llama/modeling_llama.py#L727C1-L727C1
-            self.agent = LLaMA.from_pretrained(
-                agent_path,
-                # load_in_8bit=self.load_in_8bit,
-                device_map="auto",
-                torch_dtype=torch.float16,
-            )  ##.to("cuda")
-            ## emb table
-            self.emb_table = self.agent.model.embed_tokens  ## type: ignore [32000, d]
+        # https://github.com/huggingface/transformers/blob/476be08c4aa96f8c1cae4200d2677bbe8f12cf80/src/transformers/models/llama/modeling_llama.py#L727C1-L727C1
+        self.agent = LLaMA.from_pretrained(
+            agent_path,
+            # load_in_8bit=self.load_in_8bit,
+            device_map="auto",
+            torch_dtype=torch.float16,
+        )  ##.to("cuda")
+        ## emb table
+        self.emb_table = self.agent.model.embed_tokens  ## type: ignore [32000, d]
 
-            if self.dataset == "mmlu":
-                abcd_ids = self.tokenizer(
-                    ["A", "B", "C", "D"], add_special_tokens=False
-                )["input_ids"]
-                abcd_ids = [item for sublist in abcd_ids for item in sublist]
-                self.emb_choices = F.normalize(
-                    self.emb_table(torch.tensor(abcd_ids, device=self.device)),
-                    p=2,
-                    dim=-1,
-                ).float()
-                self.choices_mapper = {"0": "A", "1": "B", "2": "C", "3": "D"}
-            self.emb_table_norm = F.normalize(
-                self.emb_table.weight, p=2, dim=-1
-            )  ## type: ignore
+        if self.dataset == "mmlu":
+            abcd_ids = self.tokenizer(["A", "B", "C", "D"], add_special_tokens=False)[
+                "input_ids"
+            ]
+            abcd_ids = [item for sublist in abcd_ids for item in sublist]
+            self.emb_choices = F.normalize(
+                self.emb_table(torch.tensor(abcd_ids, device=self.device)),
+                p=2,
+                dim=-1,
+            ).float()
+            self.choices_mapper = {"0": "A", "1": "B", "2": "C", "3": "D"}
+        self.emb_table_norm = F.normalize(
+            self.emb_table.weight, p=2, dim=-1
+        )  ## type: ignore
 
-            with open("config.yml", "r") as yaml_file:
-                yaml_config = yaml.safe_load(yaml_file)
+        with open("config.yml", "r") as yaml_file:
+            yaml_config = yaml.safe_load(yaml_file)
 
-            if other_agent_embedding:
-                try:
-                    other_emb_path = yaml_config["other_emb_path"].format(
-                        other_agent_name=other_agent_name.lower()
-                    )
-                    self.other_emb = torch.load(other_emb_path).to(self.device)
-                except:
-                    other_emb_path = f"./emb_weights/{other_agent_name.lower()}.pt"
-                    self.other_emb = torch.load(other_emb_path).to(self.device)
+        if other_agent_embedding:
+            try:
+                other_emb_path = yaml_config["other_emb_path"].format(
+                    other_agent_name=other_agent_name.lower()
+                )
+                self.other_emb = torch.load(other_emb_path).to(self.device)
+            except:
+                other_emb_path = f"./emb_weights/{other_agent_name.lower()}.pt"
+                self.other_emb = torch.load(other_emb_path).to(self.device)
 
                 # self.emb_table.weight.requires_grad = False
                 # torch.save(self.emb_table.weight, other_emb_path)
-        elif "falcon" in self.engine:
-            self.tokenizer = AutoTokenizer.from_pretrained(agent_path)
-            agent = FalconForCausalLM.from_pretrained(
-                agent_path,
-                # torch_dtype=torch.bfloat16,
-                torch_dtype=torch.float16,
-                device_map="balanced",
-                load_in_8bit=self.load_in_8bit,
-            )  ## .to("cuda")
+        # elif "falcon" in self.engine:
+        #     self.tokenizer = AutoTokenizer.from_pretrained(agent_path)
+        #     agent = FalconForCausalLM.from_pretrained(
+        #         agent_path,
+        #         # torch_dtype=torch.bfloat16,
+        #         torch_dtype=torch.float16,
+        #         device_map="balanced",
+        #         load_in_8bit=self.load_in_8bit,
+        #     )  ## .to("cuda")
 
-            self.agent = BetterTransformer.transform(agent, keep_original_model=True)
+        #     self.agent = BetterTransformer.transform(agent, keep_original_model=True)
 
-            # Setting `pad_token` to `eos_token` for open-end generation.
-            self.tokenizer.pad_token = self.tokenizer.eos_token
-            self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
-            self.emb_table = self.agent.transformer.word_embeddings
-            self.emb_table_norm = F.normalize(self.emb_table.weight, p=2, dim=-1)
+        #     # Setting `pad_token` to `eos_token` for open-end generation.
+        #     self.tokenizer.pad_token = self.tokenizer.eos_token
+        #     self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
+        #     self.emb_table = self.agent.transformer.word_embeddings
+        #     self.emb_table_norm = F.normalize(self.emb_table.weight, p=2, dim=-1)
 
-        elif "mpt" in self.engine:
-            self.tokenizer = AutoTokenizer.from_pretrained(agent_path)
-            self.agent = MptForCausalLM.from_pretrained(
-                agent_path,
-                torch_dtype=torch.float16,
-                device_map="auto",
-                load_in_8bit=self.load_in_8bit,
-            )
-            self.tokenizer.pad_token = self.tokenizer.eos_token
-            self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
-            self.emb_table = self.agent.transformer.wte  # Embedding(50432, 7168)
-            self.emb_table_norm = F.normalize(self.emb_table.weight, p=2, dim=-1)
-        else:
-            raise ValueError(f"Unknown engine {engine}")
+        # elif "mpt" in self.engine:
+        #     self.tokenizer = AutoTokenizer.from_pretrained(agent_path)
+        #     self.agent = MptForCausalLM.from_pretrained(
+        #         agent_path,
+        #         torch_dtype=torch.float16,
+        #         device_map="auto",
+        #         load_in_8bit=self.load_in_8bit,
+        #     )
+        #     self.tokenizer.pad_token = self.tokenizer.eos_token
+        #     self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
+        #     self.emb_table = self.agent.transformer.wte  # Embedding(50432, 7168)
+        #     self.emb_table_norm = F.normalize(self.emb_table.weight, p=2, dim=-1)
+        # else:
+        #     raise ValueError(f"Unknown engine {engine}")
         print(f"Loaded model from {agent_path}")
 
     def _setup_prompt_from_examples_file(self, prompt_path) -> str:
@@ -703,7 +703,7 @@ class Agent:
         ## cut off the answer when it meets one of these tokens
 
         backtick_end = self.sep_token_ids["backtick_end"]
-        eos = self.tokenizer.eos_token
+        eos = self.tokenizer.eos_token_id
 
         ## replace all 32000 in tokens by 2
         if self.engine.startswith("wizardmath"):

@@ -6,13 +6,13 @@ import os
 import subprocess
 
 
-num_gpus = 1
+num_gpus = 4
 all_model_names = [
     "llama3",
-    # "phi4",
-    # "qwen3-0_6b",
-    # "qwen3-1_7b",
-    # "ds-llama3",
+    "phi4",
+    "qwen3-0_6b",
+    "qwen3-1_7b",
+    "ds-llama3",
 ]
 all_problem_ranges = ["501-1000"]
 all_num_agents = [3]
@@ -76,7 +76,7 @@ for method in all_methods:
                             ]
                             if method == "cipher":
                                 lines_to_write.append(
-                                    f"python run_debate.py --num_points 1 --n_rounds {num_rounds} --batch_size 16 --dataset {data_name} --data_path {data_path} --custom_range {problem_range} --debaters {debaters} --max_new_tokens 2048 --initial_prompt_path {initial_prompt_paths} --debate_prompt_path {debate_prompt_paths} --temperatures 0.2,0.2,0.2,0.8,0.8,0.8 --n_ray_actors 1 --n_gpus_per_actor 1\n"
+                                    f"python run_debate.py --num_points 1 --n_rounds {num_rounds} --batch_size 4 --dataset {data_name} --data_path {data_path} --custom_range {problem_range} --debaters {debaters} --max_new_tokens 2048 --initial_prompt_path {initial_prompt_paths} --debate_prompt_path {debate_prompt_paths} --temperatures 0.6,0.6,0.6,0.6,0.6,0.6 --n_ray_actors 1 --n_gpus_per_actor 1\n"
                                 )
                             else:
                                 raise ValueError(f"Method {method} not supported")

@@ -49,7 +49,7 @@ def get_args():
     parser.add_argument(
         "--debaters",
         type=type_list("str"),
-        default=["llama3", "llama3"],  ##["falcon-40b-instruct", "llama_65B"],
+        default=["llama3", "llama3", "llama3"],  # by default, we use 3 debaters
     )
 
     ## TODO: add judge to finalize the final answer.
@@ -831,7 +831,14 @@ def debate(args: Optional[Namespace] = None, agents: Optional[Dict] = None) -> s
         use_partial_cipher = "_partial"
 
     partial_thres = args.partial_thres
-    output_name = f"id{trial}_{n_debaters}{args.debaters[0]}_{args.debaters[1]}_{dataset_name}_{filename}_seed{args.seed}_{use_vector_language}_nsols{args.n_sols_each_ques}_r{args.n_rounds}_temp{temps_str}_custom_{args.custom_range}_{positional_bias_str}{use_partial_cipher}{partial_thres}{entropy}.json"
+    if len(args.debaters) == 1:
+        output_name = f"{n_debaters}{args.debaters[0]}_{dataset_name}_{filename}_seed{args.seed}_{use_vector_language}_nsols{args.n_sols_each_ques}_r{args.n_rounds}_temp{temps_str}_custom_{args.custom_range}_{positional_bias_str}{use_partial_cipher}{partial_thres}{entropy}.json"
+    elif len(args.debaters) == 2:
+        output_name = f"{n_debaters}{args.debaters[0]}_{args.debaters[1]}_{dataset_name}_{filename}_seed{args.seed}_{use_vector_language}_nsols{args.n_sols_each_ques}_r{args.n_rounds}_temp{temps_str}_custom_{args.custom_range}_{positional_bias_str}{use_partial_cipher}{partial_thres}{entropy}.json"
+    elif len(args.debaters) == 3:
+        output_name = f"{n_debaters}{args.debaters[0]}_{args.debaters[1]}_{args.debaters[2]}_{dataset_name}_{filename}_seed{args.seed}_{use_vector_language}_nsols{args.n_sols_each_ques}_r{args.n_rounds}_temp{temps_str}_custom_{args.custom_range}_{positional_bias_str}{use_partial_cipher}{partial_thres}{entropy}.json"
+    else:
+        raise ValueError(f"Number of debaters {len(args.debaters)} not supported")
 
     ## make sure it is fewer than 255 characters
     output_name = output_name[:255]
