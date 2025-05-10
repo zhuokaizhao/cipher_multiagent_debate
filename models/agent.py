@@ -821,7 +821,7 @@ class Agent:
                     outputs = self.agent.forward(  # type: ignore
                         input_ids=None,  ## type: ignore
                         inputs_embeds=token_embs,  ## type: ignore
-                        position_ids=position_ids,  ## type: ignore
+                        # position_ids=position_ids,  ## type: ignore
                         past_key_values=past_key_values,
                     )  ## (b, 32000)
                 elif self.engine.startswith("falcon"):
