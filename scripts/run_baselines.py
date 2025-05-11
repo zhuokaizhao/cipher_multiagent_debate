@@ -27,6 +27,7 @@ all_methods = [
     # "multiagent_debate",
     # "cipher",
     "majority_vote",
+    # "single_answer",
 ]
 
 
@@ -129,7 +130,7 @@ for model_name in all_model_names:
                         f"#SBATCH --output=/fsx/zhuokai/cipher_multiagent_debate/slurm/{method}/{data_name}/{model_name}_{cur_version_name}.stdout\n",
                         f"#SBATCH --error=/fsx/zhuokai/cipher_multiagent_debate/slurm/{method}/{data_name}/{model_name}_{cur_version_name}.stderr\n",
                         "\n",
-                        f"python run_debate.py --num_points 5 --n_rounds {num_rounds} --batch_size 8 --dataset {data_name} --data_path {data_path} --custom_range {problem_range} --debaters {debaters} --max_new_tokens 1024 --initial_prompt_paths {initial_prompt_paths} --debate_prompt_path {debate_prompt_paths} --temperatures 0.8,0.8 --n_ray_actors 1 --n_gpus_per_actor 1 --n_sols_each_ques 5\n"
+                        f"python run_debate.py --num_points 5 --n_rounds {num_rounds} --batch_size 8 --dataset {data_name} --data_path {data_path} --custom_range {problem_range} --debaters {debaters} --max_new_tokens 1024 --initial_prompt_paths {initial_prompt_paths} --debate_prompt_path {debate_prompt_paths} --temperatures 0.8,0.8 --n_ray_actors 1 --n_gpus_per_actor 1 --n_sols_each_ques 5\n",
                     ]
 
                     for cur_line in lines_to_write:
@@ -142,6 +143,45 @@ for model_name in all_model_names:
                         f"{script_path}",
                     ]
                 )
-                print(
-                    f"Submitted task for {method}_{model_name}_{cur_version_name}\n"
+                print(f"Submitted task for {method}_{model_name}_{cur_version_name}\n")
+
+            elif method == "single_answer":
+                num_agents = 1
+                num_rounds = 1
+                # generate the slurm file and directory
+                cur_version_name = f"{method}_{data_name}_agents_{num_agents}_rounds_{num_rounds}_problems_{problem_range}"
+                script_path = f"/fsx/zhuokai/cipher_multiagent_debate/scripts/{method}/{data_name}/{model_name}_{cur_version_name}.slurm"
+                script_dir = os.path.dirname(script_path)
+                if not os.path.exists(script_dir):
+                    os.makedirs(script_dir, exist_ok=True)
+
+                # set the debaters
+                debaters = f"{model_name},{model_name}"
+                debate_prompt_paths = f"/fsx/zhuokai/cipher_multiagent_debate/prompts_v2/{data_name}/debate_2debaters_v1.txt"
+
+                with open(script_path, "w") as f:
+                    lines_to_write = [
+                        "#!/bin/bash\n",
+                        "#\n",
+                        "#SBATCH --chdir=/fsx/zhuokai/cipher_multiagent_debate/\n",
+                        f"#SBATCH --gres=gpu:{num_gpus}\n",
+                        "#SBATCH --mem 16G\n",
+                        "#SBATCH -c 16\n",
+                        f"#SBATCH --job-name={method}_{model_name}_{cur_version_name}\n",
+                        f"#SBATCH --output=/fsx/zhuokai/cipher_multiagent_debate/slurm/{method}/{data_name}/{model_name}_{cur_version_name}.stdout\n",
+                        f"#SBATCH --error=/fsx/zhuokai/cipher_multiagent_debate/slurm/{method}/{data_name}/{model_name}_{cur_version_name}.stderr\n",
+                        "\n",
+                        f"python run_debate.py --num_points 3 --n_rounds {num_rounds} --batch_size 8 --dataset {data_name} --data_path {data_path} --custom_range {problem_range} --debaters {debaters} --max_new_tokens 1024 --initial_prompt_paths {initial_prompt_paths} --debate_prompt_path {debate_prompt_paths} --temperatures 0.15,0.15 --n_ray_actors 1 --n_gpus_per_actor 1 --n_sols_each_ques 1\n",
+                    ]
+
+                    for cur_line in lines_to_write:
+                        f.write(cur_line)
+                    f.close()
+
+                subprocess.run(
+                    [
+                        "sbatch",
+                        f"{script_path}",
+                    ]
                 )
+                print(f"Submitted task for {method}_{model_name}_{cur_version_name}\n")
